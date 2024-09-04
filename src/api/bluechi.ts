@@ -1,6 +1,6 @@
 import cockpit from "cockpit"
 
-import { BlueChiNode } from "../model/bluechi"
+import { BlueChiNode, BlueChiUnit } from "../model/bluechi"
 
 export class BlueChiClient {
 
@@ -13,8 +13,8 @@ export class BlueChiClient {
     }
 
     bluechiService: cockpit.DBusClient;
-    bluechi_controller_proxy?: cockpit.DBusProxy;
-    bluechi_monitor_proxy?: cockpit.DBusProxy;
+    bluechiControllerProxy?: cockpit.DBusProxy;
+    bluechiMonitorProxy?: cockpit.DBusProxy;
 
     constructor(){
         this.bluechiService = cockpit.dbus('org.eclipse.bluechi', {
@@ -23,25 +23,25 @@ export class BlueChiClient {
     }
 
     private async getControllerProxy(): Promise<cockpit.DBusProxy>{
-        if(this.bluechi_controller_proxy===undefined){
-            this.bluechi_controller_proxy = this.bluechiService.proxy('org.eclipse.bluechi.Controller', '/org/eclipse/bluechi');
-            await this.bluechi_controller_proxy.wait();
+        if(this.bluechiControllerProxy===undefined){
+            this.bluechiControllerProxy = this.bluechiService.proxy('org.eclipse.bluechi.Controller', '/org/eclipse/bluechi');
+            await this.bluechiControllerProxy.wait();
         }
-        return this.bluechi_controller_proxy;
+        return this.bluechiControllerProxy;
     }
 
     private async getMonitorProxy(path: string): Promise<cockpit.DBusProxy>{
-        if(this.bluechi_monitor_proxy===undefined){
-            this.bluechi_monitor_proxy = this.bluechiService.proxy('org.eclipse.bluechi.Monitor', path);
-            await this.bluechi_monitor_proxy.wait();
+        if(this.bluechiMonitorProxy===undefined){
+            this.bluechiMonitorProxy = this.bluechiService.proxy('org.eclipse.bluechi.Monitor', path);
+            await this.bluechiMonitorProxy.wait();
         }
-        return this.bluechi_monitor_proxy;
+        return this.bluechiMonitorProxy;
     }
 
     private async getNodeProxy(path: string): Promise<cockpit.DBusProxy> {
-        const node_proxy = this.bluechiService.proxy('org.eclipse.bluechi.Node', path);
-        await node_proxy.wait();
-        return node_proxy;
+        const nodeProxy = this.bluechiService.proxy('org.eclipse.bluechi.Node', path);
+        await nodeProxy.wait();
+        return nodeProxy;
     }
 
     async listNodes(): Promise<BlueChiNode[]> {
@@ -66,14 +66,37 @@ export class BlueChiClient {
         });
     }
 
+    async listUnits(nodePath: string): Promise<BlueChiUnit[]> {
+        const nodeProxy = await this.getNodeProxy(nodePath);
+        return new Promise<BlueChiUnit[]>((resolve, reject) => {
+            var call  = nodeProxy.ListUnits();
+            call.fail((msg)=> {
+                console.log("Failed to fetch units for node '" + nodePath + "': " + msg);
+                resolve([]);
+            });
+            call.done((unitsResponse: any[]) => {
+                var units: BlueChiUnit[] = []
+                unitsResponse.forEach(elem => {
+                    units.push({
+                        unitName: elem[0],
+                        unitDescription: elem[1],
+                        unitActiveState: elem[3],
+                        unitSubState: elem[4],
+                        unitObjectPath: elem[6],
+                    })
+                });
+                resolve(units);
+            });
+        });
+    }
+
     async setupNodeMonitor(nodePath: string, handler: (state: string) => void): Promise<void> {
-        const node_proxy = await this.getNodeProxy(nodePath);
-        node_proxy.addEventListener("changed", (event, data) => {
+        const nodeProxy = await this.getNodeProxy(nodePath);
+        nodeProxy.addEventListener("changed", (event, data) => {
             const newState = data.Status;
             if (newState === undefined || newState === ""){
                 return;
             }
-            console.log("new state: ", newState);
             handler((newState as string));
         })
 
@@ -82,22 +105,51 @@ export class BlueChiClient {
         });
     }
 
-    async setupMonitor(): Promise<void> {
-        const controllerProxy = this.getControllerProxy();
+    async setupUnitMonitor(
+        nodeName: string, 
+        unitStateChangedHandler: (unitName: string, activeState: string, subState: string) => void,
+        ): Promise<void> {
+        const controllerProxy = await this.getControllerProxy();
 
-        const test = async (monitor_path: string) : Promise<void> => {
-            const monitor_proxy = this.getMonitorProxy(monitor_path);
-            monitor_proxy.Subscribe("*", "*")
+        const subscribe = async (monitorPath: string) : Promise<void> => {
+            const monitorProxy = await this.getMonitorProxy(monitorPath);
+
+            monitorProxy.addEventListener("UnitNew", (event, data) => {
+                // Currently, the load state is not displayed, so this can be skipped
+            });
+            monitorProxy.addEventListener("UnitRemoved", (event, data) => {
+                // Currently, the load state is not displayed, so this can be skipped
+            });
+            monitorProxy.addEventListener("UnitStateChanged", (event, nodeName, unitName, activeState, subState) => {
+                // skip artificially created unit from monitor creation
+                if (unitName === "*") {
+                    return;
+                }
+                unitStateChangedHandler(unitName, activeState, subState);
+            });
+            monitorProxy.addEventListener("UnitPropertiesChanged", (event, data) => {
+                // Currently, no properties are displayed, so this can be skipped
+            });
+
+            console.log("monitorproxy" ,monitorProxy);
+            var call = monitorProxy.Subscribe(nodeName, "*");
+            call.fail((msg) => {
+                console.log("Setting up subscription for '" + nodeName + "' failed: " + msg);
+            });
+            call.done((subID: string) => {
+                console.log("Monitor '" + monitorPath + "' with Subscription '" + subID + "' on Node '" + nodeName + "' created");
+            });
         }  
 
         return new Promise<void>((resolve, reject) => {
             var call = controllerProxy.CreateMonitor();
             call.fail((msg) => {
-                reject(msg);
+                console.log("Failed to create monitor for node '" + nodePath + "': " + msg);
+                resolve();
             });
-            call.done((monitor_path: string) => {
-                test(monitor_path)
-                
+            call.done((monitorPath: string) => {
+                subscribe(monitorPath);
+                resolve();                
             });
         });
     }

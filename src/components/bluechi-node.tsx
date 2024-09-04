@@ -4,6 +4,7 @@ import CheckCircleIcon from '@patternfly/react-icons/dist/esm/icons/check-circle
 import ExclamationCircleIcon from '@patternfly/react-icons/dist/esm/icons/exclamation-circle-icon';
 import { AccordionItem, AccordionContent, AccordionToggle } from '@patternfly/react-core';
 
+import { BlueChiUnitComponent } from './bluechi-unit'
 import { BlueChiNode } from '../model/bluechi';
 import { BlueChiClient } from '../api/bluechi';
 
@@ -52,15 +53,18 @@ export class BlueChiNodeComponent extends Component<Props, State> {
 
     render = (): ReactNode => {
         let icon;
+        let unitComponent;
         if(this.state.node.nodeState === "online"){
             icon = <Icon status="success"><CheckCircleIcon /></Icon>;
+            unitComponent = <BlueChiUnitComponent 
+                                nodePath={this.state.node.nodePath}
+                                units={[]}>
+                            </BlueChiUnitComponent>
         } else{
             icon = <Icon status="danger"><ExclamationCircleIcon /></Icon>
+            unitComponent = <div></div>
         }
-        let ip = "N/A";
-        if(this.state.node.nodeIP !== ""){
-            ip = this.state.node.nodeIP;
-        }
+
 
         return (
             <AccordionItem>
@@ -73,13 +77,17 @@ export class BlueChiNodeComponent extends Component<Props, State> {
                     }}
                     isExpanded={this.state.isExpanded}
                     >
-                    {icon} <div className='accordion-toggle'>{this.state.node.nodeName} - IP: {ip}</div>
+                    {icon} <div className='accordion-toggle'>{this.state.node.nodeName}</div>
                 </AccordionToggle>
                 <AccordionContent
                     id={"node-" + this.state.node.nodeName + "-content"}
                     isHidden={!this.state.isExpanded}
+                    isFixed
+                    height="500px"
                     >
                     
+                    {unitComponent}
+
                 </AccordionContent>
             </AccordionItem>
         )

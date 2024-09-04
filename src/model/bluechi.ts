@@ -4,3 +4,11 @@ export type BlueChiNode = {
     nodeState: string;
     nodeIP: string;
 };
+
+export type BlueChiUnit = {
+    unitName: string;
+    unitDescription: string;
+    unitActiveState: string;
+    unitSubState: string;
+    unitObjectPath: string;
+};
