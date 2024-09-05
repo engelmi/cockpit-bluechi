@@ -131,7 +131,6 @@ export class BlueChiClient {
                 // Currently, no properties are displayed, so this can be skipped
             });
 
-            console.log("monitorproxy" ,monitorProxy);
             var call = monitorProxy.Subscribe(nodeName, "*");
             call.fail((msg) => {
                 console.log("Setting up subscription for '" + nodeName + "' failed: " + msg);
