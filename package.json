@@ -52,9 +52,9 @@
   },
   "dependencies": {
     "@patternfly/patternfly": "6.3.0",
-    "@patternfly/react-core": "6.2.2",
-    "@patternfly/react-icons": "6.2.2",
-    "@patternfly/react-styles": "6.2.2",
+    "@patternfly/react-core": "6.3.0",
+    "@patternfly/react-icons": "6.3.0",
+    "@patternfly/react-styles": "6.3.0",
     "react": "19.1.0",
     "react-dom": "19.1.0"
   }
