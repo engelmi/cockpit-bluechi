@@ -19,8 +19,8 @@
     "stylelint:fix": "stylelint --fix src/*{.css,scss}"
   },
   "devDependencies": {
-    "@types/react": "19.1.15",
-    "@types/react-dom": "19.1.9",
+    "@types/react": "19.2.0",
+    "@types/react-dom": "19.2.0",
     "@typescript-eslint/eslint-plugin": "8.45.0",
     "argparse": "2.0.1",
     "esbuild": "0.25.10",
@@ -55,7 +55,7 @@
     "@patternfly/react-core": "6.3.1",
     "@patternfly/react-icons": "6.3.1",
     "@patternfly/react-styles": "6.3.1",
-    "react": "19.1.1",
-    "react-dom": "19.1.1"
+    "react": "19.2.0",
+    "react-dom": "19.2.0"
   }
 }
